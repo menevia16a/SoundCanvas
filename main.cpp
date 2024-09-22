@@ -14,6 +14,10 @@ int main(int argc, char* argv[]) {
         std::cerr << "Usage: " << argv[0] << " <image_file>" << std::endl;
         return 1;
     }
+    else if (std::string(argv[1]).find(".png") == std::string::npos) { // Check for png extension
+        std::cerr << "Error: " << argv[1] << " is not a PNG image." << std::endl;
+        return 1;
+    }
 
     std::string imageFilePath = argv[1];
     cv::Mat processedImage = processImage(imageFilePath);
@@ -30,7 +34,7 @@ int main(int argc, char* argv[]) {
 
 cv::Mat processImage(const std::string& filePath) {
     // Read the image using OpenCV
-    cv::Mat image = cv::imread(filePath, cv::IMREAD_UNCHANGED);
+    cv::Mat image = cv::imread(filePath, cv::IMREAD_UNCHANGED); // Ensure the alpha channel is preserved
     if (image.empty()) {
         std::cerr << "Error: Could not open or find the image." << std::endl;
         return cv::Mat();
@@ -38,9 +42,13 @@ cv::Mat processImage(const std::string& filePath) {
 
     std::cout << "Processing image.." << std::endl;
 
+    // Reduce the image size by 50%
+    cv::Mat resizedImage;
+    cv::resize(image, resizedImage, cv::Size(), 0.5, 0.5, cv::INTER_LINEAR);
+
     // Process the image converting it to grayscale
     cv::Mat grayImage;
-    cv::cvtColor(image, grayImage, cv::COLOR_BGR2GRAY);
+    cv::cvtColor(resizedImage, grayImage, cv::COLOR_BGR2GRAY);
 
     // Flip the image vertically
     cv::Mat flippedImage;
@@ -78,7 +86,9 @@ void generateWavFile(const std::string& outputFilePath, const cv::Mat& image) {
     // Convert image data to audio data
     std::vector<short> audioData;
     int sampleRate = sfInfo.samplerate;
-    int duration = 5; // Duration in seconds
+
+    // Calculate duration based on image dimensions
+    int duration = static_cast<int>(std::sqrt(image.rows * image.cols) / 10); // Heuristic
     int totalSamples = sampleRate * duration;
 
     // Calculate the number of samples per row
@@ -96,7 +106,9 @@ void generateWavFile(const std::string& outputFilePath, const cv::Mat& image) {
 
             for (int col = 0; col < image.cols; ++col) {
                 double frequency = minFrequency + (frequencyRange * col / (image.cols - 1)); // Map column to frequency
-                double amplitude = static_cast<double>(image.at<uchar>(row, col)) / 255.0; // Normalize pixel value
+                double intensity = static_cast<double>(image.at<cv::Vec4b>(row, col)[0]) / 255.0; // Grayscale intensity
+                double alpha = static_cast<double>(image.at<cv::Vec4b>(row, col)[3]) / 255.0; // Alpha channel
+                double amplitude = intensity * alpha; // Combine intensity and alpha
                 sampleValue += amplitude * sin(2.0 * CV_PI * frequency * t);
             }
 
