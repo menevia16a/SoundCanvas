@@ -5,6 +5,7 @@
 #include <sndfile.h>
 #include <cmath>
 #include <vector>
+#include <iomanip>
 
 // Function prototypes
 cv::Mat processImage(const std::string& filePath, cv::Mat& alphaChannel);
@@ -80,6 +81,12 @@ cv::Mat processImage(const std::string& filePath, cv::Mat& alphaChannel) {
     cv::rotate(grayImage, rotatedImage, cv::ROTATE_90_COUNTERCLOCKWISE);
     cv::rotate(alphaChannel, rotatedAlpha, cv::ROTATE_90_COUNTERCLOCKWISE);
 
+    // Flip the image and alpha channel vertically and horizontally to correct the mirroring effect
+    cv::flip(rotatedImage, rotatedImage, 0);
+    cv::flip(rotatedImage, rotatedImage, 1);
+    cv::flip(rotatedAlpha, rotatedAlpha, 0);
+    cv::flip(rotatedAlpha, rotatedAlpha, 1);
+
     if (rotatedImage.empty() || rotatedAlpha.empty()) {
         std::cerr << "Error: Rotated image or alpha channel is empty." << std::endl;
         return cv::Mat();
@@ -150,7 +157,7 @@ void generateWavFile(const std::string& outputFilePath, const cv::Mat& image, co
         // Output progress every 10 rows
         if (row % 10 == 0) {
             double progress = (static_cast<double>(row) / image.rows) * 100.0;
-            std::cout << "Progress: " << progress << "%" << std::endl;
+            std::cout << "Progress: " << std::fixed << std::setprecision(2) << progress << "%" << std::endl;
         }
     }
 
